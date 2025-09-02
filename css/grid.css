@@ -1,0 +1,11 @@
+/* Canvas grid DOM model */
+.grid{display:grid;gap:var(--grid-gap);align-items:start;grid-auto-rows:minmax(var(--cell-min-h),auto);min-width:720px}
+.grid .hdr,.grid .rowhdr{background:#0e1622;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:8px 10px;font-weight:600;color:#bcd1e5;text-align:center}
+.grid .rowhdr{text-align:left}
+.cell{position:relative;background:linear-gradient(180deg,rgba(17,25,39,.7),rgba(13,20,31,.5));border:1px dashed rgba(255,255,255,.12);border-radius:var(--radius);padding:6px;min-height:var(--cell-min-h);display:flex;flex-wrap:wrap;gap:6px}
+.cell.dropTarget{outline:2px solid var(--accent-2);outline-offset:2px}
+.cell .empty{color:var(--muted);font-size:12px}
+/* Disallowed cells shading */
+.cell.disallowed{ filter:grayscale(1); opacity:.6 }
+.cell .cell-tools{ position:absolute; top:4px; right:6px; display:flex; gap:4px }
+.cell .tool{ appearance:none; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.2); color:#cfe6ff; border-radius:8px; padding:2px 6px; font-size:11px; cursor:pointer }

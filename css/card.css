@@ -1,0 +1,7 @@
+/* Workitem card per UI sketch */
+.wi{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:var(--shadow);min-width:160px;max-width:220px;padding:6px;display:grid;gap:6px}
+.wi:focus{outline:2px solid var(--accent);outline-offset:2px}
+.wi-type{text-align:center;font-weight:800;font-size:12px}
+.wi-state{text-align:center;font-size:11px;padding:4px 6px;border-radius:8px;background:#132235;color:#cfe6ff;border:1px solid rgba(255,255,255,.12)}
+.wi-body{display:grid;grid-template-columns:auto 1fr auto;gap:4px 8px;font-size:12px}
+.k{color:#7b8a99}.u{color:#7b8a99}
