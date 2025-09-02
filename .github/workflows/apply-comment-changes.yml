@@ -1,0 +1,118 @@
+name: Apply changes from issue/PR comments
+
+on:
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply:
+    # Allow comments on issues or PRs
+    if: github.event.issue.number != null
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Parse comment blocks
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.comment.body || '';
+            if (!body.trim().startsWith('/apply')) {
+              core.setFailed('Comment must start with /apply');
+              return;
+            }
+
+            // We support three block types:
+            // 1) ```file:path\n<content>```
+            // 2) ```replace:path\n<regex>\n---\n<replacement>```
+            // 3) ```append:PATH@top|bottom\n<content>```
+
+            const files = [];
+            const fileRe = /```file:([^\n]+)\n([\s\S]*?)```/g;
+            const replaceRe = /```replace:([^\n]+)\n([\s\S]*?)\n---\n([\s\S]*?)```/g;
+            const appendRe = /```append:([^\n@]+)@?(top|bottom)?\n([\s\S]*?)```/g;
+
+            let m;
+            while ((m = fileRe.exec(body)) !== null) {
+              files.push({ kind: 'file', path: m[1].trim(), content: m[2].replace(/\r\n/g, '\n') });
+            }
+            while ((m = replaceRe.exec(body)) !== null) {
+              files.push({ kind: 'replace', path: m[1].trim(), pattern: m[2], replacement: m[3] });
+            }
+            while ((m = appendRe.exec(body)) !== null) {
+              files.push({ kind: 'append', path: m[1].trim(), where: (m[2]||'bottom'), content: m[3].replace(/\r\n/g, '\n') });
+            }
+
+            if (files.length === 0) {
+              core.setFailed('No ```file:```, ```replace:```, or ```append:``` blocks found');
+              return;
+            }
+            core.setOutput('files', JSON.stringify(files));
+
+      - name: Apply changes
+        if: success()
+        run: |
+          BRANCH="chatgpt/update-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const files = JSON.parse(process.env.FILES);
+          for (const f of files) {
+            if (f.kind === 'file') {
+              const dir = path.dirname(f.path);
+              if (dir !== '.') fs.mkdirSync(dir, { recursive: true });
+              fs.writeFileSync(f.path, f.content, 'utf8');
+              console.log('[write]', f.path);
+            } else if (f.kind === 'replace') {
+              if (!fs.existsSync(f.path)) { console.error('[skip:missing]', f.path); process.exit(1); }
+              const src = fs.readFileSync(f.path, 'utf8');
+              // Build a global, dotall regex from the pattern
+              const re = new RegExp(f.pattern, 'gs');
+              const out = src.replace(re, f.replacement);
+              if (out === src) { console.error('[no-match]', f.path); process.exit(1); }
+              fs.writeFileSync(f.path, out, 'utf8');
+              console.log('[replace]', f.path);
+            } else if (f.kind === 'append') {
+              if (!fs.existsSync(f.path)) { console.error('[skip:missing]', f.path); process.exit(1); }
+              const src = fs.readFileSync(f.path, 'utf8');
+              const out = (f.where === 'top') ? (f.content + '\n' + src) : (src + '\n' + f.content);
+              fs.writeFileSync(f.path, out, 'utf8');
+              console.log('[append:' + f.where + ']', f.path);
+            }
+          }
+          NODE
+        env:
+          FILES: ${{ steps.parse.outputs.files }}
+
+      - name: Commit & push
+        if: success()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Apply changes from comment by ${{ github.actor }}"
+          git push -u origin HEAD
+
+      - name: Open PR
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: context.ref.replace('refs/heads/', ''),
+              base: context.payload.repository.default_branch,
+              title: `Apply changes from comment by ${context.actor}`,
+              body: `Automated PR created from a comment.`
+            });
+            core.info(`PR #${pr.number} created`)
