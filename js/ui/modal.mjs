@@ -17,8 +17,13 @@ export function showAddItemModal(){
           <select name="type" required id="typeSelect"></select>
         </label>
         <label>Size <input name="size" type="number" min="1" max="20" value="3" required /></label>
-        <label>Complexity <input name="complexity" type="number" min="1" max="20" value="5" required /></label>
       </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="formRow">
+          <label>Complexity <input name="complexity" type="number" min="1" max="20" value="5" required /></label>
+        </div>
+      </details>
       <div class="formRow">
         <label>Initial State <select name="state" id="stateSelect"></select></label>
       </div>
@@ -81,20 +86,23 @@ export function showCellConfigModal(groupId, stateId){
         </label>
         <label>Capacity Value <input name="capVal" type="number" min="0" placeholder="Unlimited" value="${cfg.capacityValue??''}"/></label>
       </div>
-      <div class="formRow">
-        <label>Exit default
-          <select name="exitNext">${state.states.map(s=> `<option value="${s.id}" ${cfg.exit?.nextStateId===s.id?'selected':''}>${s.name}</option>`).join('')}</select>
-        </label>
-        <label>Complexity ≥ <input name="thr" type="number" min="0" value="${cfg.exit?.threshold??''}"/></label>
-        <label>High complexity →
-          <select name="exitHigh">${state.states.map(s=> `<option value="${s.id}" ${cfg.exit?.highNextStateId===s.id?'selected':''}>${s.name}</option>`).join('')}</select>
-        </label>
-      </div>
-      <div class="formRow">
-        <label style="display:inline-flex;gap:6px;align-items:center">
-          <input type="checkbox" name="done" ${cfg.exit?.doneOnExit?'checked':''}/> Items leaving this state are considered done
-        </label>
-      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="formRow">
+          <label>Exit default
+            <select name="exitNext">${state.states.map(s=> `<option value="${s.id}" ${cfg.exit?.nextStateId===s.id?'selected':''}>${s.name}</option>`).join('')}</select>
+          </label>
+          <label>Complexity ≥ <input name="thr" type="number" min="0" value="${cfg.exit?.threshold??''}"/></label>
+          <label>High complexity →
+            <select name="exitHigh">${state.states.map(s=> `<option value="${s.id}" ${cfg.exit?.highNextStateId===s.id?'selected':''}>${s.name}</option>`).join('')}</select>
+          </label>
+        </div>
+        <div class="formRow">
+          <label style="display:inline-flex;gap:6px;align-items:center">
+            <input type="checkbox" name="done" ${cfg.exit?.doneOnExit?'checked':''}/> Items leaving this state are considered done
+          </label>
+        </div>
+      </details>
       <menu>
         <button value="cancel" class="btn ghost">Cancel</button>
         <button value="ok" class="btn primary">Save</button>
