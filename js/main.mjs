@@ -125,7 +125,7 @@ function wireUI(){
     }
   });
 
-  document.addEventListener('blur', (e)=>{
+  document.addEventListener('blur', async (e)=>{
     if (e.target instanceof HTMLElement) {
       console.debug('[FlowSim] blur', e.target.tagName, e.target.dataset);
       if (e.target.matches('[data-state-name]')) { const id = e.target.dataset.id; const name = e.target.textContent.trim(); if (name) renameState(id, name); }
