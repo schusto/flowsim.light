@@ -128,6 +128,17 @@ export function showCellConfigModal(groupId, stateId){
         </div>
         <div class="formRow">
           <label style="display:inline-flex;gap:6px;align-items:center">
+            <input type="checkbox" name="decompose" ${cfg.decompose?'checked':''}/> Split items above complexity
+          </label>
+          <label class="decomposeOpts" style="display:${cfg.decompose?'':'none'}">Threshold
+            <input name="threshold" type="number" min="0" value="${cfg.decompose?.threshold??''}"/>
+          </label>
+          <label class="decomposeOpts" style="display:${cfg.decompose?'':'none'}">Children per point
+            <input name="splitRatio" type="number" min="1" value="${cfg.decompose?.splitRatio??''}"/>
+          </label>
+        </div>
+        <div class="formRow">
+          <label style="display:inline-flex;gap:6px;align-items:center">
             <input type="checkbox" name="done" ${cfg.exit?.doneOnExit?'checked':''}/> Items leaving this state are considered done
           </label>
         </div>
@@ -145,14 +156,22 @@ export function showCellConfigModal(groupId, stateId){
     const types = fd.getAll('type');
     const wip = fd.get('wip'); const capMode = fd.get('capMode'); const capVal = fd.get('capVal');
     const exitNext = fd.get('exitNext'); const thr = fd.get('thr'); const exitHigh = fd.get('exitHigh'); const done = fd.get('done')==='on';
+    const decompose = fd.get('decompose')==='on'; const thr2 = fd.get('threshold'); const splitRatio = fd.get('splitRatio');
     setCell(groupId, stateId, {
       allowedTypes: types,
       wip: wip===''?null:Number(wip),
       capacityMode: capMode,
       capacityValue: capVal===''?null:Number(capVal),
-      exit: { nextStateId: exitNext||null, threshold: thr===''?null:Number(thr), highNextStateId: exitHigh||null, doneOnExit: done }
+      exit: { nextStateId: exitNext||null, threshold: thr===''?null:Number(thr), highNextStateId: exitHigh||null, doneOnExit: done },
+      decompose: decompose ? { threshold: thr2===''?null:Number(thr2), splitRatio: splitRatio===''?null:Number(splitRatio) } : null
     });
     renderGrid(); saveSnapshot(); dlg.close();
   });
   form.querySelector('menu .ghost').addEventListener('click', () => dlg.close());
+
+  const decChk = form.querySelector('input[name="decompose"]');
+  const decOpts = form.querySelectorAll('.decomposeOpts');
+  function toggleDecompose(){ decOpts.forEach(el => el.style.display = decChk.checked ? '' : 'none'); }
+  decChk.addEventListener('change', toggleDecompose);
+  toggleDecompose();
 }

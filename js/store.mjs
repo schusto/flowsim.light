@@ -25,7 +25,7 @@ export function canWork(groupName, stateName, type){
 }
 
 // ---- Extended config: per-cell rules and workgroup schedule
-// cells: Map key = `${groupId}|${stateId}` -> { allowedTypes:[], wip: null, capacityMode:'items'|'complexity', capacityValue:null, exit:{nextStateId:null, threshold:null, highNextStateId:null, doneOnExit:false} }
+// cells: Map key = `${groupId}|${stateId}` -> { allowedTypes:[], wip: null, capacityMode:'items'|'complexity', capacityValue:null, exit:{nextStateId:null, threshold:null, highNextStateId:null, doneOnExit:false}, decompose:null|{threshold:null, splitRatio:null} }
 export const cells = new Map();
 // workgroupSettings: Map groupId -> { startDay:0, frequency:7 }
 export const workgroupSettings = new Map();
@@ -33,13 +33,15 @@ export const workgroupSettings = new Map();
 export function cellKey(groupId, stateId){ return `${groupId}|${stateId}`; }
 export function getCell(groupId, stateId){
   const k = cellKey(groupId, stateId);
-  if (!cells.has(k)) cells.set(k, { allowedTypes:[], wip:null, capacityMode:'items', capacityValue:null, exit:{ nextStateId:null, threshold:null, highNextStateId:null, doneOnExit:false } });
+  if (!cells.has(k)) cells.set(k, { allowedTypes:[], wip:null, capacityMode:'items', capacityValue:null, exit:{ nextStateId:null, threshold:null, highNextStateId:null, doneOnExit:false }, decompose:null });
   return cells.get(k);
 }
 export function setCell(groupId, stateId, data){
   const k = cellKey(groupId, stateId);
   const cur = getCell(groupId, stateId);
-  cells.set(k, { ...cur, ...data, exit: { ...cur.exit, ...(data.exit||{}) } });
+  const merged = { ...cur, ...data, exit: { ...cur.exit, ...(data.exit||{}) } };
+  if ('decompose' in data) merged.decompose = data.decompose ? { ...(cur.decompose||{}), ...data.decompose } : null;
+  cells.set(k, merged);
 }
 
 export function getWorkgroupSettings(groupId){
