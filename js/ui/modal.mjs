@@ -1,5 +1,5 @@
 // New Workitem modal + Cell config modal
-import { state, canWork, getCell, setCell } from '../store.mjs';
+import { state, getCell, setCell, groupFor } from '../store.mjs';
 import { newItem } from '../model.mjs';
 import { renderSidebar } from './sidebar.mjs';
 import { renderItemsIntoGrid, renderGrid } from './grid.mjs';
@@ -21,7 +21,6 @@ export function showAddItemModal(){
       </div>
       <div class="formRow">
         <label>Initial State <select name="state" id="stateSelect"></select></label>
-        <label>Workgroup <select name="group" id="groupSelect"></select></label>
       </div>
       <menu>
         <button value="cancel" class="btn ghost">Cancel</button>
@@ -31,21 +30,16 @@ export function showAddItemModal(){
   const form = dlg.querySelector('#itemForm');
   const typeSel = form.querySelector('#typeSelect');
   const stSel = form.querySelector('#stateSelect');
-  const gpSel = form.querySelector('#groupSelect');
   stSel.innerHTML=''; state.states.forEach(s=> stSel.appendChild(new Option(s.name, s.id)));
   gpSel.innerHTML=''; state.groups.forEach(g=> gpSel.appendChild(new Option(g.name, g.id)));
   typeSel.innerHTML=''; state.types.forEach(t=> typeSel.appendChild(new Option(t, t)));
 
   function refreshFilters(){
     const type = typeSel.value;
-    const allowedStates = state.states.filter(s => state.groups.some(g => canWork(g.name, s.name, type)));
+    const allowedStates = state.states.filter(s => groupFor(s.id, type));
     const curS = stSel.value; stSel.innerHTML=''; allowedStates.forEach(s=> stSel.appendChild(new Option(s.name, s.id)));
     if (allowedStates.some(s=>s.id===curS)) stSel.value=curS;
-    const sName = state.states.find(s=>s.id===stSel.value)?.name;
-    const allowedGroups = state.groups.filter(g => canWork(g.name, sName, type));
-    const curG = gpSel.value; gpSel.innerHTML=''; allowedGroups.forEach(g=> gpSel.appendChild(new Option(g.name, g.id)));
-    if (allowedGroups.some(g=>g.id===curG)) gpSel.value=curG;
-    form.querySelector('#confirmAdd').disabled = !(allowedStates.length && allowedGroups.length);
+    form.querySelector('#confirmAdd').disabled = !allowedStates.length;
   }
   typeSel.addEventListener('change', refreshFilters);
   stSel.addEventListener('change', refreshFilters);
@@ -55,9 +49,9 @@ export function showAddItemModal(){
   form.addEventListener('submit', e => e.preventDefault());
   form.querySelector('menu .primary').addEventListener('click', () => {
     const fd = new FormData(form);
-    const type = fd.get('type'); const stateId = fd.get('state'); const groupId = fd.get('group');
-    if (!type || !stateId || !groupId) return;
-    newItem({ type, size: Number(fd.get('size')), complexity: Number(fd.get('complexity')), stateId, groupId });
+    const type = fd.get('type'); const stateId = fd.get('state');
+    if (!type || !stateId) return;
+    newItem({ type, size: Number(fd.get('size')), complexity: Number(fd.get('complexity')), stateId });
     renderItemsIntoGrid(); saveSnapshot(); dlg.close();
   });
   form.querySelector('menu .ghost').addEventListener('click', () => dlg.close());

@@ -22,10 +22,8 @@ export function addGroup(name='Workgroup'){ state.groups.push({id:uid(), name});
 export function renameGroup(id, name){ const g=state.groups.find(x=>x.id===id); if(!g) return; g.name=name||g.name; renderSidebar(); renderGrid(); saveSnapshot(); }
 export function deleteGroup(id){
   const g = state.groups.find(x=>x.id===id); if(!g) return;
-  if (!confirm(`Delete workgroup “${g.name}”? Items in this row will move to first workgroup.`)) return;
+  if (!confirm(`Delete workgroup “${g.name}”?`)) return;
   const remaining = state.groups.filter(x => x.id!==id); if (remaining.length===0){ alert('Cannot delete the last workgroup.'); return; }
-  const target = remaining[0].id;
-  for (const it of state.items.values()){ if (it.groupId===id){ it.groupId=target; } }
   state.groups = remaining; renderSidebar(); renderGrid(); saveSnapshot();
 }
 export function moveGroup(id, delta){
@@ -33,8 +31,8 @@ export function moveGroup(id, delta){
   const [gp]=state.groups.splice(i,1); state.groups.splice(j,0,gp); renderSidebar(); renderGrid(); saveSnapshot();
 }
 
-export function newItem({type='Story', size=3, complexity=5, stateId, groupId}){
+export function newItem({type='Story', size=3, complexity=5, stateId}){
   const id = uid(); const now = state.sim.day;
-  const it = { id, type, size, complexity, stateId, groupId, createdAt: now, stateEnteredAt: now };
+  const it = { id, type, size, complexity, stateId, createdAt: now, stateEnteredAt: now };
   state.items.set(id, it); return it;
 }

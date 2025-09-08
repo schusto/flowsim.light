@@ -1,5 +1,5 @@
 // Grid rendering + DnD
-import { state, TYPE_COLORS, canWork, getCell } from '../store.mjs';
+import { state, TYPE_COLORS, getCell, groupFor } from '../store.mjs';
 
 const $ = s => document.querySelector(s);
 const h = (tag, props={}, children=[]) => {
@@ -38,14 +38,13 @@ export function renderGrid(){
         const id = e.dataTransfer.getData('text/plain');
         const it = state.items.get(id); if(!it) return;
         const prev = it.stateId;
-        const groupName = state.groups.find(x=>x.id===g.id)?.name;
-        const stateName = state.states.find(x=>x.id===s.id)?.name;
-        if (!canWork(groupName, stateName, it.type)){
-          console.debug('[FlowSim] drop blocked', {groupName, stateName, type: it.type});
+        const expected = groupFor(s.id, it.type);
+        if (expected !== g.id){
+          console.debug('[FlowSim] drop blocked', {expected, target:g.id, stateId:s.id, type:it.type});
           cell.animate([{transform:'translateY(0)'},{transform:'translateY(-3px)'},{transform:'translateY(0)'}], {duration:220});
           return;
         }
-        it.stateId = s.id; it.groupId = g.id;
+        it.stateId = s.id;
         if (prev !== s.id) it.stateEnteredAt = state.sim.day;
         renderItemsIntoGrid();
         localStorage.setItem('flowsim.touch','1');
@@ -63,7 +62,9 @@ export function renderItemsIntoGrid(){
   grid.querySelectorAll('.cell').forEach(c => c.querySelector('.empty') ? null : c.appendChild(Object.assign(document.createElement('div'), {className:'empty', textContent:'Drop items here…'})));
   grid.querySelectorAll('.cell').forEach(c => { c.querySelectorAll('.wi').forEach(el=>el.remove()); });
   for (const it of state.items.values()){
-    const selector = `.cell[data-state-id="${it.stateId}"][data-group-id="${it.groupId}"]`;
+    const gId = groupFor(it.stateId, it.type);
+    if (!gId) continue;
+    const selector = `.cell[data-state-id="${it.stateId}"][data-group-id="${gId}"]`;
     const cell = grid.querySelector(selector); if (!cell) continue;
     const empty = cell.querySelector('.empty'); if (empty) empty.remove();
     cell.appendChild(renderItem(it));
