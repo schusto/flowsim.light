@@ -14,9 +14,7 @@ export function showAddItemModal(){
       <h3>New Workitem</h3>
       <div class="formRow">
         <label>Type
-          <select name="type" required>
-            <option>Epic</option><option>Feature</option><option>Story</option><option>Bug</option>
-          </select>
+          <select name="type" required id="typeSelect"></select>
         </label>
         <label>Size <input name="size" type="number" min="1" max="20" value="3" required /></label>
         <label>Complexity <input name="complexity" type="number" min="1" max="20" value="5" required /></label>
@@ -31,11 +29,12 @@ export function showAddItemModal(){
       </menu>
     </form>`;
   const form = dlg.querySelector('#itemForm');
-  const typeSel = form.querySelector('select[name="type"]');
+  const typeSel = form.querySelector('#typeSelect');
   const stSel = form.querySelector('#stateSelect');
   const gpSel = form.querySelector('#groupSelect');
   stSel.innerHTML=''; state.states.forEach(s=> stSel.appendChild(new Option(s.name, s.id)));
   gpSel.innerHTML=''; state.groups.forEach(g=> gpSel.appendChild(new Option(g.name, g.id)));
+  typeSel.innerHTML=''; state.types.forEach(t=> typeSel.appendChild(new Option(t, t)));
 
   function refreshFilters(){
     const type = typeSel.value;
@@ -68,7 +67,7 @@ export function showCellConfigModal(groupId, stateId){
   const dlg = document.getElementById('cellModal');
   const cfg = getCell(groupId, stateId);
   const st = state.states.find(s=>s.id===stateId); const g = state.groups.find(x=>x.id===groupId);
-  const allTypes = ['Epic','Feature','Story','Bug'];
+  const allTypes = state.types;
   dlg.innerHTML = `
     <form id="cellForm" method="dialog">
       <h3>Cell Settings — ${g?.name||'Group'} × ${st?.name||'State'}</h3>

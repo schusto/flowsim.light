@@ -4,10 +4,12 @@ export const state = {
   states: [],          // [{id,name}]
   groups: [],          // [{id,name}]
   items: new Map(),    // id -> item
+  types: [],          // ['Epic','Feature',...]
   nextId: 1,
 };
 
 export const TYPE_COLORS = { Epic:'#fde68a', Feature:'#93c5fd', Story:'#a7f3d0', Bug:'#fca5a5' };
+export const ALL_TYPES = Object.keys(TYPE_COLORS);
 export const uid = () => String(state.nextId++);
 
 // Capability rules (by names, simple prototype approach)
@@ -58,6 +60,7 @@ export function saveSnapshot(){
     items: Array.from(state.items.values()),
     cells: Array.from(cells.entries()),
     workgroupSettings: Array.from(workgroupSettings.entries()),
+    types: state.types,
     nextId: state.nextId,
   };
   localStorage.setItem('flowsim.v2', JSON.stringify(snap));
@@ -74,6 +77,7 @@ export function loadSnapshot(){
     // load cells & workgroupSettings if present
     try { cells.clear(); (s.cells||[]).forEach(([k,v])=> cells.set(k,v)); } catch {}
     try { workgroupSettings.clear(); (s.workgroupSettings||[]).forEach(([k,v])=> workgroupSettings.set(k,v)); } catch {}
+    state.types = s.types ?? [...ALL_TYPES];
     state.nextId = s.nextId ?? 1;
     return true;
   }catch{ return false; }
@@ -81,11 +85,13 @@ export function loadSnapshot(){
 
 export const DEFAULT_STATES = ['Funnel','Review','Analysis Prio','Quick Check','Deep Dive','Ready for prio','Prioritized for PIP','Ready for Development'];
 export const DEFAULT_GROUPS = ['LPM Board','Program Board','Exploration Team','Deep Dive Workgroup','Dev Teams'];
+export const DEFAULT_TYPES = [...ALL_TYPES];
 
 export function isSnapshotValid(){
   try{
     if (!Array.isArray(state.states) || !Array.isArray(state.groups)) return false;
     if (state.states.length === 0 || state.groups.length === 0) return false;
+    if (!Array.isArray(state.types) || state.types.length === 0) return false;
     return true;
   }catch{ return false; }
 }
@@ -98,7 +104,7 @@ export function seedCellsFromRules(){
     r.states.forEach(stName => {
       const st = nameToState.get(stName); if (!st) return;
       const cfg = getCell(g.id, st.id);
-      const types = Array.from(new Set([...(cfg.allowedTypes||[]), ...r.types]));
+      const types = Array.from(new Set([...(cfg.allowedTypes||[]), ...r.types.filter(t=>state.types.includes(t))]));
       setCell(g.id, st.id, { allowedTypes: types });
     });
   });

@@ -27,7 +27,8 @@ export function renderGrid(){
     for (const s of state.states){
       const cell = h('div', { class:'cell', dataset:{ stateId: s.id, groupId: g.id } });
       const cfg = getCell(g.id, s.id);
-      if (!cfg.allowedTypes || cfg.allowedTypes.length === 0) cell.classList.add('disallowed');
+      const allowed = (cfg.allowedTypes||[]).filter(t=>state.types.includes(t));
+      if (allowed.length === 0) cell.classList.add('disallowed');
       const tools = h('div', { class:'cell-tools' }, [ h('button', { class:'tool', dataset:{ editCell:'', stateId: s.id, groupId: g.id } }, '⚙︎') ]);
       cell.appendChild(tools);
       cell.addEventListener('dragover', e => { e.preventDefault(); cell.classList.add('dropTarget'); });
