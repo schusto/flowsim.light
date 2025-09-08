@@ -49,6 +49,20 @@ export function setWorkgroupSettings(groupId, data){
   workgroupSettings.set(groupId, { ...cur, ...data });
 }
 
+// derive workgroup for an item based on its state and type
+// returns the groupId or null if not uniquely determined
+export function groupFor(stateId, type){
+  let found = null;
+  for (const g of state.groups){
+    const cfg = getCell(g.id, stateId);
+    if (cfg.allowedTypes && cfg.allowedTypes.includes(type)){
+      if (found !== null) return null; // ambiguous
+      found = g.id;
+    }
+  }
+  return found;
+}
+
 // persistence
 export function saveSnapshot(){
   const snap = {
@@ -70,7 +84,10 @@ export function loadSnapshot(){
     state.sim.day = s.sim?.day ?? 0;
     state.states = s.states ?? [];
     state.groups = s.groups ?? [];
-    state.items = new Map((s.items ?? []).map(it => [it.id, it]));
+    state.items = new Map((s.items ?? []).map(it => {
+      const { groupId, ...rest } = it || {};
+      return [rest.id, rest];
+    }));
     // load cells & workgroupSettings if present
     try { cells.clear(); (s.cells||[]).forEach(([k,v])=> cells.set(k,v)); } catch {}
     try { workgroupSettings.clear(); (s.workgroupSettings||[]).forEach(([k,v])=> workgroupSettings.set(k,v)); } catch {}
