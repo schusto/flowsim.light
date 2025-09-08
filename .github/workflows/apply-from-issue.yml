@@ -31,19 +31,14 @@ jobs:
             const { owner, repo } = context.repo;
             const body = context.payload.comment.body || '';
 
-            // Allow: "/apply", "/apply main", "/apply to main"
+            // Accept: "/apply", "/apply main", "/apply to my-branch"
             const m = body.match(/^\/apply(?:\s+(?:to\s+)?([A-Za-z0-9._\/\-]+))?/);
             const { data: repoData } = await github.rest.repos.get({ owner, repo });
             const defaultBranch = repoData.default_branch;
             const targetBranch = (m && m[1]) ? m[1] : defaultBranch;
 
             // Validate branch exists
-            try {
-              await github.rest.repos.getBranch({ owner, repo, branch: targetBranch });
-            } catch (e) {
-              core.setFailed(`Target branch "${targetBranch}" does not exist`);
-              return;
-            }
+            await github.rest.repos.getBranch({ owner, repo, branch: targetBranch });
 
             core.setOutput('owner', owner);
             core.setOutput('repo', repo);
@@ -57,40 +52,33 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract patch from comment into patch.diff
+      - name: Extract patch from comment (Node, no awk)
         id: extract
-        shell: bash
-        run: |
-          body="${{ github.event.comment.body }}"
-          echo "$body" | awk '
-            BEGIN{inblock=0; lang=""; got=0}
-            /^```/{
-              if(inblock==0){ inblock=1; lang=$0 }
-              else { if(got==1) exit; inblock=0; lang="" }
-              next
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            const body = context.payload.comment.body || '';
+            // Find first fenced code block, prefer ```diff or ```patch, else any ```
+            // This regex is intentionally simple and robust across line endings.
+            const RE = /```(?:diff|patch)?\r?\n([\s\S]*?)\r?\n```/;
+            const m = body.match(RE);
+
+            if (!m) {
+              core.setFailed('No fenced code block found. Add a block like:\n```diff\\ndiff --git a/file b/file\\n...\\n```');
+              return;
             }
-            {
-              if(inblock==1){
-                if (lang ~ /^```(diff|patch)/ || lang ~ /^```$/){
-                  print
-                  got=1
-                }
-              }
-            }' > patch.diff || true
 
-          if [ ! -s patch.diff ]; then
-            echo "No patch found in the comment."
-            exit 2
-          fi
+            const diffText = m[1].trim();
+            if (!/^diff --git\s/m.test(diffText)) {
+              core.setFailed('Fenced block found, but it does not look like a unified diff (missing "diff --git").');
+              return;
+            }
 
-          # Sanity check: unified diff usually contains "diff --git"
-          if ! grep -qE '^diff --git ' patch.diff; then
-            echo "Patch does not look like a unified diff (missing 'diff --git')."
-            exit 2
-          fi
-
-          echo "First 30 lines of patch:"
-          head -n 30 patch.diff
+            fs.writeFileSync('patch.diff', diffText, 'utf8');
+            core.info('patch.diff written (' + diffText.split('\n').length + ' lines)');
 
       - name: Apply patch & commit on a new branch
         id: apply
@@ -176,7 +164,7 @@ jobs:
               await github.rest.issues.createComment({
                 ...context.repo,
                 issue_number,
-                body: '❌ `/apply` failed. Open **Actions → this run** for logs. Ensure your comment starts with `/apply` and contains a unified diff in a fenced code block.'
+                body: '❌ `/apply` failed. Check the Actions logs. Ensure your comment starts with `/apply` and contains a unified diff in a fenced code block.'
               });
               return;
             }
@@ -185,7 +173,7 @@ jobs:
               await github.rest.issues.createComment({
                 ...context.repo,
                 issue_number,
-                body: 'ℹ️ Patch applied but no changes were detected (the branch may already contain these changes).'
+                body: 'ℹ️ Patch applied but no changes were detected (branch may already contain these changes).'
               });
               return;
             }
