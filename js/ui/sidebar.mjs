@@ -1,5 +1,6 @@
 // Sidebar lists for states & groups (inline editable, tool buttons)
-import { state, saveSnapshot, getWorkgroupSettings } from '../store.mjs';
+import { state, saveSnapshot, getWorkgroupSettings, ALL_TYPES } from '../store.mjs';
+import { renderGrid } from './grid.mjs';
 
 const $ = s => document.querySelector(s);
 const h = (tag, props={}, children=[]) => {
@@ -52,4 +53,20 @@ export function renderSidebar(){
     ]);
     groupList.appendChild(li);
   });
+  // types
+  const typeList = $('#typeList'); if (typeList){ typeList.innerHTML='';
+    ALL_TYPES.forEach(t=>{
+      const li = h('li', {}, [
+        h('label', { style:'display:flex;align-items:center;gap:6px' }, [
+          h('input', { type:'checkbox', checked: state.types.includes(t), onchange:(e)=>{
+            if (e.target.checked){ if(!state.types.includes(t)) state.types.push(t); }
+            else { state.types = state.types.filter(x=>x!==t); }
+            renderGrid(); saveSnapshot();
+          }}),
+          t
+        ])
+      ]);
+      typeList.appendChild(li);
+    });
+  }
 }
