@@ -1,0 +1,198 @@
+name: /apply-from-issue
+
+on:
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  apply_from_issue:
+    if: >
+      !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/apply') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Parse command & repo info
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const body = context.payload.comment.body || '';
+
+            // Allow: "/apply", "/apply main", "/apply to main"
+            const m = body.match(/^\/apply(?:\s+(?:to\s+)?([A-Za-z0-9._\/\-]+))?/);
+            const { data: repoData } = await github.rest.repos.get({ owner, repo });
+            const defaultBranch = repoData.default_branch;
+            const targetBranch = (m && m[1]) ? m[1] : defaultBranch;
+
+            // Validate branch exists
+            try {
+              await github.rest.repos.getBranch({ owner, repo, branch: targetBranch });
+            } catch (e) {
+              core.setFailed(`Target branch "${targetBranch}" does not exist`);
+              return;
+            }
+
+            core.setOutput('owner', owner);
+            core.setOutput('repo', repo);
+            core.setOutput('issue', String(context.payload.issue.number));
+            core.setOutput('targetBranch', targetBranch);
+
+      - name: Check out target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.parse.outputs.targetBranch }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract patch from comment into patch.diff
+        id: extract
+        shell: bash
+        run: |
+          body="${{ github.event.comment.body }}"
+          echo "$body" | awk '
+            BEGIN{inblock=0; lang=""; got=0}
+            /^```/{
+              if(inblock==0){ inblock=1; lang=$0 }
+              else { if(got==1) exit; inblock=0; lang="" }
+              next
+            }
+            {
+              if(inblock==1){
+                if (lang ~ /^```(diff|patch)/ || lang ~ /^```$/){
+                  print
+                  got=1
+                }
+              }
+            }' > patch.diff || true
+
+          if [ ! -s patch.diff ]; then
+            echo "No patch found in the comment."
+            exit 2
+          fi
+
+          # Sanity check: unified diff usually contains "diff --git"
+          if ! grep -qE '^diff --git ' patch.diff; then
+            echo "Patch does not look like a unified diff (missing 'diff --git')."
+            exit 2
+          fi
+
+          echo "First 30 lines of patch:"
+          head -n 30 patch.diff
+
+      - name: Apply patch & commit on a new branch
+        id: apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          base="${{ steps.parse.outputs.targetBranch }}"
+          new_branch="apply/issue-${{ steps.parse.outputs.issue }}-${{ github.run_id }}"
+
+          echo "Creating branch: $new_branch from $base"
+          git switch -c "$new_branch"
+
+          echo "Applying patch..."
+          if git apply -3 --index patch.diff; then
+            echo "three_way=1" >> $GITHUB_OUTPUT
+          else
+            echo "Three-way failed; trying plain apply…"
+            git reset --hard
+            git switch "$new_branch"
+            if git apply --index patch.diff; then
+              echo "three_way=0" >> $GITHUB_OUTPUT
+            else
+              echo "Patch failed to apply."
+              exit 3
+            fi
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit (patch may already be applied)."
+            echo "no_changes=1" >> $GITHUB_OUTPUT
+          else
+            git commit -m "Apply patch from issue #${{ steps.parse.outputs.issue }} by @${{ github.actor }}"
+            echo "no_changes=0" >> $GITHUB_OUTPUT
+          fi
+
+          echo "new_branch=$new_branch" >> $GITHUB_OUTPUT
+
+      - name: Push branch
+        if: steps.apply.outputs.no_changes != '1'
+        run: git push origin "${{ steps.apply.outputs.new_branch }}"
+
+      - name: Open PR to target branch
+        if: steps.apply.outputs.no_changes != '1'
+        id: open_pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = '${{ steps.parse.outputs.owner }}';
+            const repo  = '${{ steps.parse.outputs.repo }}';
+            const base  = '${{ steps.parse.outputs.targetBranch }}';
+            const head  = '${{ steps.apply.outputs.new_branch }}';
+            const issue_number = Number('${{ steps.parse.outputs.issue }}');
+            const threeWay = ('${{ steps.apply.outputs.three_way }}' === '1') ? 'yes' : 'no';
+
+            const title = `Apply patch from issue #${issue_number}`;
+            const body  = [
+              `This PR was opened automatically by the /apply workflow from issue #${issue_number}.`,
+              '',
+              `- Base: \`${base}\``,
+              `- Head: \`${head}\``,
+              `- Three-way merge used: ${threeWay}`
+            ].join('\n');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner, repo, title, head, base, body, maintainer_can_modify: true
+            });
+
+            core.setOutput('pr', pr.html_url);
+
+      - name: Comment result on the issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue_number = Number('${{ steps.parse.outputs.issue }}');
+
+            if ('${{ steps.apply.outcome }}' !== 'success') {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number,
+                body: '❌ `/apply` failed. Open **Actions → this run** for logs. Ensure your comment starts with `/apply` and contains a unified diff in a fenced code block.'
+              });
+              return;
+            }
+
+            if ('${{ steps.apply.outputs.no_changes }}' === '1') {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number,
+                body: 'ℹ️ Patch applied but no changes were detected (the branch may already contain these changes).'
+              });
+              return;
+            }
+
+            const prUrl = '${{ steps.open_pr.outputs.pr }}';
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number,
+              body: `✅ Patch applied and a PR was opened: ${prUrl}`
+            });
