@@ -119,15 +119,19 @@ jobs:
       - name: Comment success
         if: success()
         uses: actions/github-script@v7
+        env:
+          NO_CHANGES: ${{ steps.apply.outputs.no_changes }}
         with:
           script: |
             const issue_number = context.payload.issue.number;
-            const msg = `✅ Patch applied${{ steps.apply.outputs.no_changes == '1' ? ' (no changes detected)' : '' }}.`;
+            const no = (process.env.NO_CHANGES || '') === '1';
+            const msg = `✅ Patch applied${no ? ' (no changes detected)' : ''}.`;
             await github.issues.createComment({
               ...context.repo,
               issue_number,
               body: msg
             });
+
 
     # Error reporting
   report:
