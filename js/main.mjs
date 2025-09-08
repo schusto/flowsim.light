@@ -1,5 +1,5 @@
 // Entry: wire UI, boot state, start sim
-import { state, saveSnapshot, loadSnapshot, uid, DEFAULT_STATES, DEFAULT_GROUPS, isSnapshotValid, seedCellsFromRules, cells, workgroupSettings } from './store.mjs';
+import { state, saveSnapshot, loadSnapshot, DEFAULT_STATES, DEFAULT_GROUPS, isSnapshotValid, seedCellsFromRules, cells, workgroupSettings, groupFor } from './store.mjs';
 import { addState, renameState, deleteState, moveState, addGroup, renameGroup, deleteGroup, moveGroup, newItem } from './model.mjs';
 import { renderGrid, renderItemsIntoGrid } from './ui/grid.mjs';
 import { renderSidebar } from './ui/sidebar.mjs';
@@ -30,7 +30,7 @@ function importJSON(file){
       state.sim.day = Number(data.sim?.day ?? 0);
       state.states = data.states ?? [];
       state.groups = data.groups ?? [];
-      state.items = new Map((data.items ?? []).map(it => [it.id, it]));
+      state.items = new Map((data.items ?? []).map(it => { const { groupId, ...rest } = it || {}; return [rest.id, rest]; }));
       // cells & workgroup settings
       const store = await import('./store.mjs');
       store.cells.clear(); (data.cells||[]).forEach(([k,v])=> store.cells.set(k,v));
@@ -57,7 +57,7 @@ async function saveLocalConfig(name){
 }
 async function loadLocalConfig(name){
   const all = JSON.parse(localStorage.getItem('flowsim.saved')||'{}'); const data=all[name]; if(!data) return false;
-  state.sim.day = Number(data.sim?.day ?? 0); state.states = data.states ?? []; state.groups = data.groups ?? []; state.items = new Map((data.items ?? []).map(it => [it.id, it]));
+  state.sim.day = Number(data.sim?.day ?? 0); state.states = data.states ?? []; state.groups = data.groups ?? []; state.items = new Map((data.items ?? []).map(it => { const { groupId, ...rest } = it || {}; return [rest.id, rest]; }));
   const store = await import('./store.mjs');
   store.cells.clear(); (data.cells||[]).forEach(([k,v])=> store.cells.set(k,v));
   store.workgroupSettings.clear(); (data.workgroupSettings||[]).forEach(([k,v])=> store.workgroupSettings.set(k,v));
@@ -97,11 +97,14 @@ function wireUI(){
     if (t.matches('[data-move-group]')) { moveGroup(t.dataset.id, Number(t.dataset.delta||0)); }
     // Items
     if (t.matches('#addRandomItemBtn')){
-      const s = state.states[Math.floor(Math.random()*state.states.length)];
-      const g = state.groups[Math.floor(Math.random()*state.groups.length)];
       const types = ['Epic','Feature','Story','Bug'];
-      newItem({ type: types[Math.floor(Math.random()*types.length)], size: 1+Math.floor(Math.random()*8), complexity: 1+Math.floor(Math.random()*8), stateId: s.id, groupId: g.id });
-      renderItemsIntoGrid(); saveSnapshot();
+      const type = types[Math.floor(Math.random()*types.length)];
+      const validStates = state.states.filter(s => groupFor(s.id, type));
+      if (validStates.length){
+        const s = validStates[Math.floor(Math.random()*validStates.length)];
+        newItem({ type, size: 1+Math.floor(Math.random()*8), complexity: 1+Math.floor(Math.random()*8), stateId: s.id });
+        renderItemsIntoGrid(); saveSnapshot();
+      }
     }
     if (t.matches('#addItemBtn')) showAddItemModal();
 
@@ -150,9 +153,11 @@ function boot(){
     seedCellsFromRules();
     const pick = arr => arr[Math.floor(Math.random()*arr.length)];
     for (let i=0;i<8;i++){
-      const s = pick(state.states); const g = pick(state.groups);
       const t = pick(['Epic','Feature','Story','Bug']);
-      newItem({ type:t, size:1+Math.floor(Math.random()*8), complexity:1+Math.floor(Math.random()*8), stateId:s.id, groupId:g.id });
+      const validStates = state.states.filter(s => groupFor(s.id, t));
+      if (!validStates.length) continue;
+      const s = pick(validStates);
+      newItem({ type:t, size:1+Math.floor(Math.random()*8), complexity:1+Math.floor(Math.random()*8), stateId:s.id });
     }
     saveSnapshot();
   }
