@@ -132,8 +132,6 @@ jobs:
               body: msg
             });
 
-
-    # Error reporting
   report:
     needs: apply
     if: failure()
