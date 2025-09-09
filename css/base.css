@@ -38,7 +38,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   flex:1;
   appearance:none;
   border:none;
-  background:rgba(255,255,255,.04);
+  background:#0e1622;
   color:var(--muted);
   padding:8px 12px;
   font-weight:600;
