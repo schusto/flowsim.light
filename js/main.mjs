@@ -29,9 +29,14 @@ function importJSON(file){
     try{
       const data = JSON.parse(reader.result);
       state.sim.day = Number(data.sim?.day ?? 0);
+      state.sim.nextDay = Math.floor(state.sim.day) + 1;
       state.states = data.states ?? [];
       state.groups = data.groups ?? [];
-      state.items = new Map((data.items ?? []).map(it => { const { groupId, ...rest } = it || {}; return [rest.id, rest]; }));
+      state.items = new Map((data.items ?? []).map(it => {
+        const { groupId, ...rest } = it || {};
+        if (rest.remaining === undefined) rest.remaining = rest.complexity;
+        return [rest.id, rest];
+      }));
       // cells & workgroup settings
       const store = await import('./store.mjs');
       store.cells.clear(); (data.cells||[]).forEach(([k,v])=> store.cells.set(k,v));
@@ -59,7 +64,14 @@ async function saveLocalConfig(name){
 }
 async function loadLocalConfig(name){
   const all = JSON.parse(localStorage.getItem('flowsim.saved')||'{}'); const data=all[name]; if(!data) return false;
-  state.sim.day = Number(data.sim?.day ?? 0); state.states = data.states ?? []; state.groups = data.groups ?? []; state.items = new Map((data.items ?? []).map(it => { const { groupId, ...rest } = it || {}; return [rest.id, rest]; }));
+  state.sim.day = Number(data.sim?.day ?? 0);
+  state.sim.nextDay = Math.floor(state.sim.day) + 1;
+  state.states = data.states ?? []; state.groups = data.groups ?? [];
+  state.items = new Map((data.items ?? []).map(it => {
+    const { groupId, ...rest } = it || {};
+    if (rest.remaining === undefined) rest.remaining = rest.complexity;
+    return [rest.id, rest];
+  }));
   const store = await import('./store.mjs');
   state.types = data.types ?? [...store.ALL_TYPES];
   store.cells.clear(); (data.cells||[]).forEach(([k,v])=> store.cells.set(k,v));

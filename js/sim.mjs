@@ -1,16 +1,23 @@
 // Simulation loop
 import { state } from './store.mjs';
+import { processDay } from './engine.mjs';
 
 const $ = s => document.querySelector(s);
 
 export function startSim(){
+  state.sim.nextDay = Math.floor(state.sim.day) + 1;
   const raf = (now)=>{
     const dt = now - state.sim.lastTick;
     state.sim.lastTick = now;
     if (state.sim.playing){
       const deltaDays = (dt / 1000) * state.sim.speed;
       state.sim.day += deltaDays;
-      $('#simDay').textContent = String(Math.floor(state.sim.day));
+      const curDay = Math.floor(state.sim.day);
+      while (state.sim.nextDay <= curDay){
+        processDay(state.sim.nextDay);
+        state.sim.nextDay++;
+      }
+      $('#simDay').textContent = String(curDay);
       document.querySelectorAll('.wi').forEach(el=>{
         const id = el.dataset.id;
         const it = window.__items?.get(id); if(!it) return;
