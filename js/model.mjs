@@ -33,6 +33,6 @@ export function moveGroup(id, delta){
 
 export function newItem({type='Story', size=3, complexity=5, stateId}){
   const id = uid(); const now = state.sim.day;
-  const it = { id, type, size, complexity, stateId, createdAt: now, stateEnteredAt: now };
+  const it = { id, type, size, complexity, remaining: complexity, stateId, createdAt: now, stateEnteredAt: now };
   state.items.set(id, it); return it;
 }

@@ -1,6 +1,6 @@
 // Global state + persistence
 export const state = {
-  sim: { playing:false, day:0, speed:1, lastTick: performance.now() },
+  sim: { playing:false, day:0, speed:1, lastTick: performance.now(), nextDay:1 },
   states: [],          // [{id,name}]
   groups: [],          // [{id,name}]
   items: new Map(),    // id -> item
@@ -87,10 +87,12 @@ export function loadSnapshot(){
   try{
     const s = JSON.parse(raw);
     state.sim.day = s.sim?.day ?? 0;
+    state.sim.nextDay = Math.floor(state.sim.day) + 1;
     state.states = s.states ?? [];
     state.groups = s.groups ?? [];
     state.items = new Map((s.items ?? []).map(it => {
       const { groupId, ...rest } = it || {};
+      if (rest.remaining === undefined) rest.remaining = rest.complexity;
       return [rest.id, rest];
     }));
     // load cells & workgroupSettings if present
