@@ -4,6 +4,7 @@ import { addState, renameState, deleteState, moveState, addGroup, renameGroup, d
 import { renderGrid, renderItemsIntoGrid } from './ui/grid.mjs';
 import { renderConfig, showConfigModal } from './ui/config.mjs';
 import { showAddItemModal, showCellConfigModal } from './ui/modal.mjs';
+import { showRuleModal } from './ui/autorules.mjs';
 import { startSim, setSpeed, togglePlay } from './sim.mjs';
 
 const $ = s => document.querySelector(s);
@@ -16,7 +17,8 @@ function exportJSON(){
     items: Array.from(state.items.values()),
     cells: Array.from(cells.entries()),
     workgroupSettings: Array.from(workgroupSettings.entries()),
-    types: state.types
+    types: state.types,
+    rules: state.rules
   }, null, 2) ], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -42,6 +44,7 @@ function importJSON(file){
       store.cells.clear(); (data.cells||[]).forEach(([k,v])=> store.cells.set(k,v));
       store.workgroupSettings.clear(); (data.workgroupSettings||[]).forEach(([k,v])=> store.workgroupSettings.set(k,v));
       state.types = data.types ?? [...store.ALL_TYPES];
+      state.rules = data.rules ?? [];
       // fix next id
       const maxItemId = Math.max(0, ...Array.from(state.items.keys()).map(Number).filter(n => !Number.isNaN(n)));
       const maxStateId = Math.max(0, ...state.states.map(s => Number(s.id)).filter(n => !Number.isNaN(n)));
@@ -59,7 +62,7 @@ function importJSON(file){
 // Local named configs
 function listLocalConfigs(){ try{ return Object.keys(JSON.parse(localStorage.getItem('flowsim.saved')||'{}')); }catch{return [];} }
 async function saveLocalConfig(name){
-  const data={ sim:{ day: Math.floor(state.sim.day) }, states: state.states, groups: state.groups, items: Array.from(state.items.values()), cells: Array.from(cells.entries()), workgroupSettings: Array.from(workgroupSettings.entries()), types: state.types };
+  const data={ sim:{ day: Math.floor(state.sim.day) }, states: state.states, groups: state.groups, items: Array.from(state.items.values()), cells: Array.from(cells.entries()), workgroupSettings: Array.from(workgroupSettings.entries()), types: state.types, rules: state.rules };
   const all = JSON.parse(localStorage.getItem('flowsim.saved')||'{}'); all[name]=data; localStorage.setItem('flowsim.saved', JSON.stringify(all));
 }
 async function loadLocalConfig(name){
@@ -74,6 +77,7 @@ async function loadLocalConfig(name){
   }));
   const store = await import('./store.mjs');
   state.types = data.types ?? [...store.ALL_TYPES];
+  state.rules = data.rules ?? [];
   store.cells.clear(); (data.cells||[]).forEach(([k,v])=> store.cells.set(k,v));
   store.workgroupSettings.clear(); (data.workgroupSettings||[]).forEach(([k,v])=> store.workgroupSettings.set(k,v));
   return true;
@@ -136,6 +140,7 @@ function wireUI(){
     if (t.matches('#saveLocalBtn')){ const name = prompt('Save as name:'); if(name){ saveLocalConfig(name).then(()=>console.info('[FlowSim] saved local config', name)); } }
     if (t.matches('#loadLocalBtn')){ const names = listLocalConfigs(); const name = prompt('Load which?\n' + names.join('\n')); if(name){ loadLocalConfig(name).then(ok=>{ if(ok){ renderConfig(); renderGrid(); saveSnapshot(); }}); } }
     if (t.matches('#configBtn')){ showConfigModal(); }
+    if (t.matches('#rulesBtn')){ showRuleModal(); }
     if (t.matches('#listLocalBtn')){ console.table(listLocalConfigs()); }
     // Cell config
     if (t.matches('[data-edit-cell]')){ const gid=t.dataset.groupId, sid=t.dataset.stateId; showCellConfigModal(gid, sid); }
