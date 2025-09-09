@@ -2,7 +2,7 @@
 import { state, saveSnapshot, loadSnapshot, uid, DEFAULT_STATES, DEFAULT_GROUPS, DEFAULT_TYPES, isSnapshotValid, seedCellsFromRules, cells, workgroupSettings, groupFor } from './store.mjs';
 import { addState, renameState, deleteState, moveState, addGroup, renameGroup, deleteGroup, moveGroup, newItem } from './model.mjs';
 import { renderGrid, renderItemsIntoGrid } from './ui/grid.mjs';
-import { renderSidebar } from './ui/sidebar.mjs';
+import { renderConfig, showConfigModal } from './ui/config.mjs';
 import { showAddItemModal, showCellConfigModal } from './ui/modal.mjs';
 import { startSim, setSpeed, togglePlay } from './sim.mjs';
 
@@ -48,7 +48,7 @@ function importJSON(file){
       const maxGroupId = Math.max(0, ...state.groups.map(g => Number(g.id)).filter(n => !Number.isNaN(n)));
       state.nextId = Math.max(maxItemId, maxStateId, maxGroupId) + 1;
       $('#simDay').textContent = String(Math.floor(state.sim.day));
-      renderSidebar();
+      renderConfig();
       renderGrid();
       saveSnapshot();
     }catch(e){ alert('Invalid JSON'); }
@@ -90,7 +90,7 @@ function wireUI(){
     state.sim.playing = false;
     $('#playPauseBtn').textContent = '▶︎ Play';
     $('#simDay').textContent = String(Math.floor(state.sim.day));
-    renderSidebar();
+    renderConfig();
     renderGrid();
     saveSnapshot();
   });
@@ -134,7 +134,8 @@ function wireUI(){
 
     // Local configs
     if (t.matches('#saveLocalBtn')){ const name = prompt('Save as name:'); if(name){ saveLocalConfig(name).then(()=>console.info('[FlowSim] saved local config', name)); } }
-    if (t.matches('#loadLocalBtn')){ const names = listLocalConfigs(); const name = prompt('Load which?\n' + names.join('\n')); if(name){ loadLocalConfig(name).then(ok=>{ if(ok){ renderSidebar(); renderGrid(); saveSnapshot(); }}); } }
+    if (t.matches('#loadLocalBtn')){ const names = listLocalConfigs(); const name = prompt('Load which?\n' + names.join('\n')); if(name){ loadLocalConfig(name).then(ok=>{ if(ok){ renderConfig(); renderGrid(); saveSnapshot(); }}); } }
+    if (t.matches('#configBtn')){ showConfigModal(); }
     if (t.matches('#listLocalBtn')){ console.table(listLocalConfigs()); }
     // Cell config
     if (t.matches('[data-edit-cell]')){ const gid=t.dataset.groupId, sid=t.dataset.stateId; showCellConfigModal(gid, sid); }
@@ -187,7 +188,7 @@ function boot(){
     saveSnapshot();
   }
   document.getElementById('simDay').textContent = String(Math.floor(state.sim.day));
-  renderSidebar();
+  renderConfig();
   renderGrid();
   wireUI();
   console.info('[FlowSim] wireUI attached');
