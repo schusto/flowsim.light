@@ -1,7 +1,6 @@
 // New Workitem modal + Cell config modal
 import { state, getCell, setCell, groupFor } from '../store.mjs';
 import { newItem } from '../model.mjs';
-import { renderSidebar } from './sidebar.mjs';
 import { renderItemsIntoGrid, renderGrid } from './grid.mjs';
 import { saveSnapshot } from '../store.mjs';
 

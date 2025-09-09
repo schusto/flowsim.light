@@ -15,6 +15,7 @@
   <header class="topbar">
     <div class="brand"><div class="logo">🌀</div><div class="title">FlowSim <span class="tag">prototype</span></div></div>
     <div class="controls">
+      <button id="configBtn" class="btn ghost">⚙ Config</button>
       <button id="playPauseBtn" class="btn primary">▶︎ Play</button>
       <button id="resetBtn" class="btn">⟲ Reset</button>
       <label class="speed">Speed <input id="speed" type="range" min="0.25" max="8" step="0.25" value="1" /><span id="speedVal">1×</span></label>
@@ -34,20 +35,6 @@
   <main class="layout">
     <aside class="sidebar">
       <section>
-        <h2>States</h2>
-        <ul id="stateList" class="list"></ul>
-        <button id="addStateBtn" class="btn small" data-add-state>+ State</button>
-      </section>
-      <section>
-        <h2>Workgroups</h2>
-        <ul id="groupList" class="list"></ul>
-        <button id="addGroupBtn" class="btn small" data-add-group>+ Workgroup</button>
-      </section>
-      <section>
-        <h2>Types</h2>
-        <ul id="typeList" class="list"></ul>
-      </section>
-      <section>
         <h2>Simulation</h2>
         <div class="simInfo">Day: <strong id="simDay">0</strong> • Items: <strong id="itemCount">0</strong></div>
       </section>
@@ -62,6 +49,8 @@
   <dialog id="itemModal"></dialog>
   <!-- Cell Config Modal -->
   <dialog id="cellModal"></dialog>
+  <!-- Configuration Modal -->
+  <dialog id="configModal"></dialog>
 
   <template id="itemTpl">
     <article class="wi" draggable="true" role="button" aria-label="Workitem">
