@@ -3,9 +3,26 @@ import { state, getCell, getWorkgroupSettings, groupFor } from './store.mjs';
 import { newItem } from './model.mjs';
 import { renderItemsIntoGrid } from './ui/grid.mjs';
 
+const randInt = (min,max)=>Math.floor(Math.random()*(max-min+1))+min;
+
 // Process a single simulation day
 export function processDay(day){
   let changed = false;
+  // Generate new items based on arrival rules
+  for (const rule of state.rules){
+    if (!rule.enabled) continue;
+    if (rule.nextDay === undefined) rule.nextDay = day;
+    if (day >= rule.nextDay){
+      const qty = randInt(rule.qtyMin, rule.qtyMax);
+      for (let i=0;i<qty;i++){
+        const size = randInt(rule.sizeMin, rule.sizeMax);
+        const complexity = randInt(rule.complexityMin, rule.complexityMax);
+        newItem({ type: rule.type, size, complexity, stateId: rule.stateId });
+      }
+      rule.nextDay = day + randInt(rule.freqMin, rule.freqMax);
+      changed = true;
+    }
+  }
   for (const g of state.groups){
     const sched = getWorkgroupSettings(g.id);
     if (day < sched.startDay) continue;

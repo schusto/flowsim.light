@@ -6,16 +6,17 @@
   <title>FlowSim — Modular Prototype</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/base.css">
-  <link rel="stylesheet" href="./css/grid.css">
-  <link rel="stylesheet" href="./css/card.css">
-  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/grid.css">
+  <link rel="stylesheet" href="css/card.css">
+  <link rel="icon" href="favicon.ico" sizes="any">
 </head>
 <body>
   <header class="topbar">
     <div class="brand"><div class="logo">🌀</div><div class="title">FlowSim <span class="tag">prototype</span></div></div>
     <div class="controls">
       <button id="configBtn" class="btn ghost">⚙ Config</button>
+      <button id="rulesBtn" class="btn ghost">⚙ Rules</button>
       <button id="playPauseBtn" class="btn primary">▶︎ Play</button>
       <button id="resetBtn" class="btn">⟲ Reset</button>
       <label class="speed">Speed <input id="speed" type="range" min="0.25" max="8" step="0.25" value="1" /><span id="speedVal">1×</span></label>
@@ -51,6 +52,8 @@
   <dialog id="cellModal"></dialog>
   <!-- Configuration Modal -->
   <dialog id="configModal"></dialog>
+  <!-- Rule Config Modal -->
+  <dialog id="ruleModal"></dialog>
 
   <template id="itemTpl">
     <article class="wi" draggable="true" role="button" aria-label="Workitem">
@@ -65,6 +68,6 @@
     </article>
   </template>
 
-  <script type="module" src="./js/main.mjs"></script>
+  <script type="module" src="js/main.mjs"></script>
 </body>
 </html>
