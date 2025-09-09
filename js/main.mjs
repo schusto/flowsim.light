@@ -157,7 +157,6 @@ function boot(){
     seedCellsFromRules();
     const pick = arr => arr[Math.floor(Math.random()*arr.length)];
     for (let i=0;i<8;i++){
-      const s = pick(state.states); const g = pick(state.groups);
       const t = pick(['Epic','Feature','Story','Bug']);
       const validStates = state.states.filter(s => groupFor(s.id, t));
       if (!validStates.length) continue;
