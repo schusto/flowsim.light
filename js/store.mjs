@@ -6,6 +6,7 @@ export const state = {
   items: new Map(),    // id -> item
   types: [],          // ['Epic','Feature',...]
   nextId: 1,
+  rules: [],          // automatic arrival rules
 };
 
 export const TYPE_COLORS = { Epic:'#fde68a', Feature:'#93c5fd', Story:'#a7f3d0', Bug:'#fca5a5' };
@@ -78,6 +79,7 @@ export function saveSnapshot(){
     workgroupSettings: Array.from(workgroupSettings.entries()),
     types: state.types,
     nextId: state.nextId,
+    rules: state.rules,
   };
   localStorage.setItem('flowsim.v2', JSON.stringify(snap));
 }
@@ -100,6 +102,7 @@ export function loadSnapshot(){
     try { workgroupSettings.clear(); (s.workgroupSettings||[]).forEach(([k,v])=> workgroupSettings.set(k,v)); } catch {}
     state.types = s.types ?? [...ALL_TYPES];
     state.nextId = s.nextId ?? 1;
+    state.rules = s.rules ?? [];
     return true;
   }catch{ return false; }
 }
