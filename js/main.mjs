@@ -85,6 +85,15 @@ function wireUI(){
     togglePlay();
     $('#playPauseBtn').textContent = state.sim.playing ? '⏸ Pause' : '▶︎ Play';
   });
+  $('#resetBtn').addEventListener('click', () => {
+    loadSnapshot();
+    state.sim.playing = false;
+    $('#playPauseBtn').textContent = '▶︎ Play';
+    $('#simDay').textContent = String(Math.floor(state.sim.day));
+    renderSidebar();
+    renderGrid();
+    saveSnapshot();
+  });
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' && !e.repeat && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA'){
       e.preventDefault();
