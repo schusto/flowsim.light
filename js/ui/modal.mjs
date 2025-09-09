@@ -7,11 +7,23 @@ import { saveSnapshot } from '../store.mjs';
 
 const $ = s => document.querySelector(s);
 
+// Quick presets for new workitems
+const itemPresets = [
+  { label: 'Small Bug', type: 'Bug', size: 1, complexity: 2 },
+  { label: 'Medium Story', type: 'Story', size: 3, complexity: 5 },
+  { label: 'Large Feature', type: 'Feature', size: 8, complexity: 13 }
+];
+
 export function showAddItemModal(){
   const dlg = document.getElementById('itemModal');
   dlg.innerHTML = `
     <form id="itemForm" method="dialog">
       <h3>New Workitem</h3>
+      <div class="formRow">
+        <label>Preset
+          <select id="presetSelect"><option value="">Custom</option></select>
+        </label>
+      </div>
       <div class="formRow">
         <label>Type
           <select name="type" required id="typeSelect"></select>
@@ -35,9 +47,11 @@ export function showAddItemModal(){
   const form = dlg.querySelector('#itemForm');
   const typeSel = form.querySelector('#typeSelect');
   const stSel = form.querySelector('#stateSelect');
+  const presetSel = form.querySelector('#presetSelect');
   stSel.innerHTML=''; state.states.forEach(s=> stSel.appendChild(new Option(s.name, s.id)));
-  gpSel.innerHTML=''; state.groups.forEach(g=> gpSel.appendChild(new Option(g.name, g.id)));
   typeSel.innerHTML=''; state.types.forEach(t=> typeSel.appendChild(new Option(t, t)));
+  const availablePresets = itemPresets.filter(p => !p.type || state.types.includes(p.type));
+  availablePresets.forEach((p, i) => presetSel.appendChild(new Option(p.label, i)));
 
   function refreshFilters(){
     const type = typeSel.value;
@@ -48,6 +62,21 @@ export function showAddItemModal(){
   }
   typeSel.addEventListener('change', refreshFilters);
   stSel.addEventListener('change', refreshFilters);
+  presetSel.addEventListener('change', () => {
+    const idx = presetSel.value;
+    if (idx === '') return;
+    const pre = availablePresets[idx];
+    if (pre.type && state.types.includes(pre.type)) typeSel.value = pre.type;
+    if (pre.size !== undefined) form.elements['size'].value = pre.size;
+    if (pre.complexity !== undefined) form.elements['complexity'].value = pre.complexity;
+    refreshFilters();
+    if (pre.stateId) {
+      if ([...stSel.options].some(o=>o.value===pre.stateId)) stSel.value = pre.stateId;
+      else stSel.selectedIndex = 0;
+    } else {
+      stSel.selectedIndex = 0;
+    }
+  });
   refreshFilters();
 
   dlg.showModal();
