@@ -56,14 +56,14 @@ export function renderRules(){
         h('button', { class:'iconBtn danger', type:'button', title:'Delete', onclick:()=>{ state.rules = state.rules.filter(r=>r.id!==rule.id); renderRules(); saveSnapshot(); } }, '✕')
       ]),
       h('div', { class:'row', style:'margin-top:6px; gap:6px; align-items:center' }, [
-        h('span',{},'Frequency'),
+        h('span',{},'Frequency Interval'),
         h('input',{ type:'number', value:rule.freqMin, min:1, style:'width:60px', onchange:e=>{ rule.freqMin=Number(e.target.value)||1; saveSnapshot(); } }),
         h('span',{},'to'),
         h('input',{ type:'number', value:rule.freqMax, min:rule.freqMin, style:'width:60px', onchange:e=>{ rule.freqMax=Number(e.target.value)||rule.freqMin; saveSnapshot(); } }),
         h('span',{},'days')
       ]),
       h('div', { class:'row', style:'margin-top:6px; gap:6px; align-items:center' }, [
-        h('span',{},'Quantity'),
+        h('span',{},'Quantity Interval'),
         h('input',{ type:'number', value:rule.qtyMin, min:1, style:'width:60px', onchange:e=>{ rule.qtyMin=Number(e.target.value)||1; saveSnapshot(); } }),
         h('span',{},'to'),
         h('input',{ type:'number', value:rule.qtyMax, min:rule.qtyMin, style:'width:60px', onchange:e=>{ rule.qtyMax=Number(e.target.value)||rule.qtyMin; saveSnapshot(); } })
