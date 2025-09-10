@@ -95,50 +95,49 @@ export function showCellConfigModal(groupId, stateId){
   const cfg = getCell(groupId, stateId);
   const st = state.states.find(s=>s.id===stateId); const g = state.groups.find(x=>x.id===groupId);
   const allTypes = state.types;
+
   dlg.innerHTML = `
     <form id="cellForm" method="dialog">
-      <h3>Cell Settings — ${g?.name||'Group'} × ${st?.name||'State'}</h3>
+      <h3>Cell Settings — <span class="gName"></span> × <span class="sName"></span></h3>
       <div class="formRow">
         <label style="display:block">Types</label>
-        ${allTypes.map(t => `<label style="display:inline-flex;gap:6px;align-items:center;margin-right:10px">
-          <input type="checkbox" name="type" value="${t}" ${cfg.allowedTypes?.includes(t)?'checked':''}/> ${t}
-        </label>`).join('')}
+        <div class="typeWrap"></div>
       </div>
       <div class="formRow">
-        <label>WIP <input name="wip" type="number" min="0" placeholder="∞" value="${cfg.wip??''}"/></label>
+        <label>WIP <input name="wip" type="number" min="0" placeholder="∞"/></label>
         <label>Capacity Mode
           <select name="capMode">
-            <option ${cfg.capacityMode==='items'?'selected':''} value="items">Items</option>
-            <option ${cfg.capacityMode==='complexity'?'selected':''} value="complexity">Complexity</option>
+            <option value="items">Items</option>
+            <option value="complexity">Complexity</option>
           </select>
         </label>
-        <label>Capacity Value <input name="capVal" type="number" min="0" placeholder="Unlimited" value="${cfg.capacityValue??''}"/></label>
+        <label>Capacity Value <input name="capVal" type="number" min="0" placeholder="Unlimited"/></label>
       </div>
       <details>
         <summary>Advanced</summary>
         <div class="formRow">
           <label>Exit default
-            <select name="exitNext">${state.states.map(s=> `<option value="${s.id}" ${cfg.exit?.nextStateId===s.id?'selected':''}>${s.name}</option>`).join('')}</select>
+            <select name="exitNext"></select>
           </label>
-          <label>Complexity ≥ <input name="thr" type="number" min="0" value="${cfg.exit?.threshold??''}"/></label>
+          <label>Complexity ≥ <input name="thr" type="number" min="0"/></label>
           <label>High complexity →
-            <select name="exitHigh">${state.states.map(s=> `<option value="${s.id}" ${cfg.exit?.highNextStateId===s.id?'selected':''}>${s.name}</option>`).join('')}</select>
+            <select name="exitHigh"></select>
           </label>
         </div>
         <div class="formRow">
           <label style="display:inline-flex;gap:6px;align-items:center">
-            <input type="checkbox" name="decompose" ${cfg.decompose?'checked':''}/> Split items above complexity
+            <input type="checkbox" name="decompose"/> Split items above complexity
           </label>
-          <label class="decomposeOpts" style="display:${cfg.decompose?'':'none'}">Threshold
-            <input name="threshold" type="number" min="0" value="${cfg.decompose?.threshold??''}"/>
+          <label class="decomposeOpts" style="display:none">Threshold
+            <input name="threshold" type="number" min="0"/>
           </label>
-          <label class="decomposeOpts" style="display:${cfg.decompose?'':'none'}">Children per point
-            <input name="splitRatio" type="number" min="1" value="${cfg.decompose?.splitRatio??''}"/>
+          <label class="decomposeOpts" style="display:none">Children per point
+            <input name="splitRatio" type="number" min="1"/>
           </label>
         </div>
         <div class="formRow">
           <label style="display:inline-flex;gap:6px;align-items:center">
-            <input type="checkbox" name="done" ${cfg.exit?.doneOnExit?'checked':''}/> Items leaving this state are considered done
+            <input type="checkbox" name="done"/> Items leaving this state are considered done
           </label>
         </div>
       </details>
@@ -147,8 +146,51 @@ export function showCellConfigModal(groupId, stateId){
         <button value="ok" class="btn primary">Save</button>
       </menu>
     </form>`;
+
   dlg.showModal();
   const form = dlg.querySelector('#cellForm');
+  form.querySelector('.gName').textContent = g?.name || 'Group';
+  form.querySelector('.sName').textContent = st?.name || 'State';
+
+  // Build type checkboxes safely
+  const typeWrap = form.querySelector('.typeWrap');
+  allTypes.forEach(t => {
+    const label = document.createElement('label');
+    label.style.display='inline-flex'; label.style.gap='6px'; label.style.alignItems='center'; label.style.marginRight='10px';
+    const input = document.createElement('input');
+    input.type='checkbox'; input.name='type'; input.value=t;
+    if (cfg.allowedTypes?.includes(t)) input.checked = true;
+    label.appendChild(input);
+    const span = document.createElement('span');
+    span.textContent = t;
+    label.appendChild(span);
+    typeWrap.appendChild(label);
+  });
+
+  // Populate selects
+  const exitNextSel = form.querySelector('select[name="exitNext"]');
+  const exitHighSel = form.querySelector('select[name="exitHigh"]');
+  state.states.forEach(s => {
+    const opt1 = document.createElement('option');
+    opt1.value = s.id; opt1.textContent = s.name;
+    if (cfg.exit?.nextStateId===s.id) opt1.selected = true;
+    exitNextSel.appendChild(opt1);
+    const opt2 = document.createElement('option');
+    opt2.value = s.id; opt2.textContent = s.name;
+    if (cfg.exit?.highNextStateId===s.id) opt2.selected = true;
+    exitHighSel.appendChild(opt2);
+  });
+
+  // Set input values
+  form.elements['wip'].value = cfg.wip ?? '';
+  form.elements['capMode'].value = cfg.capacityMode ?? 'items';
+  form.elements['capVal'].value = cfg.capacityValue ?? '';
+  form.elements['thr'].value = cfg.exit?.threshold ?? '';
+  form.elements['done'].checked = cfg.exit?.doneOnExit ?? false;
+  form.elements['decompose'].checked = cfg.decompose ? true : false;
+  form.elements['threshold'].value = cfg.decompose?.threshold ?? '';
+  form.elements['splitRatio'].value = cfg.decompose?.splitRatio ?? '';
+
   form.addEventListener('submit', e => e.preventDefault());
   form.querySelector('menu .primary').addEventListener('click', () => {
     const fd = new FormData(form);

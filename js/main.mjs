@@ -9,6 +9,23 @@ import { startSim, setSpeed, togglePlay } from './sim.mjs';
 
 const $ = s => document.querySelector(s);
 
+const MAX_FILE_BYTES = 1_000_000; // 1MB
+const MAX_STATES = 100;
+const MAX_GROUPS = 100;
+const MAX_ITEMS = 10000;
+
+function isValidConfig(data){
+  if (typeof data !== 'object' || data === null) return false;
+  const { states=[], groups=[], items=[] } = data;
+  if (!Array.isArray(states) || states.length > MAX_STATES) return false;
+  if (!Array.isArray(groups) || groups.length > MAX_GROUPS) return false;
+  if (!Array.isArray(items) || items.length > MAX_ITEMS) return false;
+  if (!states.every(s => typeof s.id !== 'undefined' && typeof s.name === 'string')) return false;
+  if (!groups.every(g => typeof g.id !== 'undefined' && typeof g.name === 'string')) return false;
+  if (!items.every(it => typeof it.id !== 'undefined' && typeof it.type === 'string')) return false;
+  return true;
+}
+
 function exportJSON(){
   const blob = new Blob([ JSON.stringify({
     sim:{ day: Math.floor(state.sim.day) },
@@ -26,10 +43,12 @@ function exportJSON(){
   URL.revokeObjectURL(url);
 }
 function importJSON(file){
+  if (file.size > MAX_FILE_BYTES){ alert('File too large'); return; }
   const reader = new FileReader();
   reader.onload = async () => {
     try{
       const data = JSON.parse(reader.result);
+      if (!isValidConfig(data)) throw new Error('schema');
       state.sim.day = Number(data.sim?.day ?? 0);
       state.sim.nextDay = Math.floor(state.sim.day) + 1;
       state.states = data.states ?? [];
@@ -66,7 +85,10 @@ async function saveLocalConfig(name){
   const all = JSON.parse(localStorage.getItem('flowsim.saved')||'{}'); all[name]=data; localStorage.setItem('flowsim.saved', JSON.stringify(all));
 }
 async function loadLocalConfig(name){
-  const all = JSON.parse(localStorage.getItem('flowsim.saved')||'{}'); const data=all[name]; if(!data) return false;
+  const allStr = localStorage.getItem('flowsim.saved')||'{}';
+  if (allStr.length > MAX_FILE_BYTES) { alert('Local config too large'); return false; }
+  const all = JSON.parse(allStr); const data=all[name];
+  if(!data || !isValidConfig(data)) return false;
   state.sim.day = Number(data.sim?.day ?? 0);
   state.sim.nextDay = Math.floor(state.sim.day) + 1;
   state.states = data.states ?? []; state.groups = data.groups ?? [];
